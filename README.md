@@ -1,6 +1,6 @@
-# PandoraFMS DISCO – VMware vCenter Summary (pyVmomi)
+# PandoraFMS – VMware vCenter Summary (pyVmomi)
 
-Package: **pandorafms.vmware_vcenter_pyvmomi_summary**  
+Package: **pandorafms.vmware_vcenter_pyvmomi**  
 Purpose: Collect **inventory + performance summary** for:
 - vCenter (VM totals)
 - ESXi hosts (per-host summary + per-host VM summary table)
