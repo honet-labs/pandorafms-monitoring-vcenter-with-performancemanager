@@ -48,7 +48,7 @@ def xml_escape(s) -> str:
 def mk_module(
     name: str,
     value,
-    mtype: str = "generic_data",
+    mtype: str = "async_data",
     unit: Optional[str] = None,
     group: Optional[str] = None,
     description: Optional[str] = None,
@@ -443,10 +443,10 @@ def main():
         counters["vms"] = len(vms_all)
         counters["datastores"] = len(dss_all)
 
-        modules.append(mk_module("vCenter:Endpoint", f"https://{args.host}/sdk", "generic_data_string", group="Information"))
-        modules.append(mk_module("Inventory:HostsTotal", counters["hosts"], "generic_data", group="Information"))
-        modules.append(mk_module("Inventory:VMsTotal", counters["vms"], "generic_data", group="Information"))
-        modules.append(mk_module("Inventory:DatastoresTotal", counters["datastores"], "generic_data", group="Information"))
+        modules.append(mk_module("vCenter:Endpoint", f"https://{args.host}/sdk", "async_string", group="Information"))
+        modules.append(mk_module("Inventory:HostsTotal", counters["hosts"], "async_data", group="Information"))
+        modules.append(mk_module("Inventory:VMsTotal", counters["vms"], "async_data", group="Information"))
+        modules.append(mk_module("Inventory:DatastoresTotal", counters["datastores"], "async_data", group="Information"))
         # Datastores (capacity / free / used% + type + host mount status)
         for ds in dss:
             try:
@@ -460,17 +460,17 @@ def main():
                 name = safe_name(ds_name_raw)
 
                 g = "Datastore"
-                modules.append(mk_module(f"DS:{name}:CapacityGiB", format_bytes_gib(cap), "generic_data", unit="GiB", group=g))
-                modules.append(mk_module(f"DS:{name}:FreeGiB", format_bytes_gib(free), "generic_data", unit="GiB", group=g))
-                modules.append(mk_module(f"DS:{name}:UsedPercent", round(pct, 2), "generic_data", unit="%", group=g))
+                modules.append(mk_module(f"DS:{name}:CapacityGiB", format_bytes_gib(cap), "async_data", unit="GiB", group=g))
+                modules.append(mk_module(f"DS:{name}:FreeGiB", format_bytes_gib(free), "async_data", unit="GiB", group=g))
+                modules.append(mk_module(f"DS:{name}:UsedPercent", round(pct, 2), "async_data", unit="%", group=g))
 
                 # Type label (e.g. VMFS 6 / NFS NFS41)
                 dtype = datastore_type_label(ds)
-                modules.append(mk_module(f"DS:{name}:Type", dtype, "generic_data_string", group=g))
+                modules.append(mk_module(f"DS:{name}:Type", dtype, "async_string", group=g))
 
                 # Shared datastore flag
                 shared = 1 if getattr(summ, "multipleHostAccess", False) else 0
-                modules.append(mk_module(f"DS:{name}:Shared", shared, "generic_data", group=g, description="1=shared, 0=local"))
+                modules.append(mk_module(f"DS:{name}:Shared", shared, "async_data", group=g, description="1=shared, 0=local"))
 
                 # Per-host mount status
                 host_mounts = getattr(ds, "host", None) or []
@@ -491,14 +491,14 @@ def main():
 
                         hn = safe_name(hname)
                         g2 = "Datastore Host Mount"
-                        modules.append(mk_module(f"DS:{name}:Host:{hn}:Mounted", mounted, "generic_data", group=g2))
-                        modules.append(mk_module(f"DS:{name}:Host:{hn}:Connected", connected, "generic_data", group=g2))
+                        modules.append(mk_module(f"DS:{name}:Host:{hn}:Mounted", mounted, "async_data", group=g2))
+                        modules.append(mk_module(f"DS:{name}:Host:{hn}:Connected", connected, "async_data", group=g2))
                     except Exception:
                         continue
 
                 if hm_rows:
                     table_txt = make_ds_hostmount_table(hm_rows)
-                    modules.append(mk_module(f"DS:{name}:HostMountTable", table_txt, "generic_data_string", group=g))
+                    modules.append(mk_module(f"DS:{name}:HostMountTable", table_txt, "async_string", group=g))
             except Exception:
                 continue
 
@@ -527,7 +527,7 @@ def main():
                 cs = str(h.runtime.connectionState)
             except Exception:
                 cs = "unknown"
-            modules.append(mk_module(f"Host:{hname} ({moid}):ConnectionState", cs, "generic_data_string", group=g_inv,
+            modules.append(mk_module(f"Host:{hname} ({moid}):ConnectionState", cs, "async_string", group=g_inv,
                                      str_critical=".*(disconnected|notResponding).*"))
 
             pdata = host_perf.get(moid, {})
@@ -536,12 +536,12 @@ def main():
                 unit = id2unit.get(cid, "")
                 val = scale_value(raw, unit)
                 if unit == "percent":
-                    modules.append(mk_module(f"Host:{hname} ({moid}):{full}", f"{val:.2f}", "generic_data", unit="%", group=g_perf,
+                    modules.append(mk_module(f"Host:{hname} ({moid}):{full}", f"{val:.2f}", "async_data", unit="%", group=g_perf,
                                              min_warning="80", min_critical="90"))
                 elif unit == "kiloBytesPerSecond":
-                    modules.append(mk_module(f"Host:{hname} ({moid}):{full}", val, "generic_data", unit="KBps", group=g_perf))
+                    modules.append(mk_module(f"Host:{hname} ({moid}):{full}", val, "async_data", unit="KBps", group=g_perf))
                 else:
-                    modules.append(mk_module(f"Host:{hname} ({moid}):{full}", val, "generic_data", group=g_perf))
+                    modules.append(mk_module(f"Host:{hname} ({moid}):{full}", val, "async_data", group=g_perf))
         # VM perf counters for table (CPU/Mem/Disk/Net RX/TX)
         wanted_vm = ["cpu.usage.average", "mem.usage.average", "disk.usage.average", "net.received.average", "net.transmitted.average"]
         vm_perf = {}
@@ -703,17 +703,17 @@ def main():
 
         # ===== VCenter summary modules =====
         g_vc = "VCenter"
-        modules.append(mk_module("Hosts:Total", host_total, "generic_data", group=g_vc))
-        modules.append(mk_module("Hosts:Up", host_up, "generic_data", group=g_vc))
-        modules.append(mk_module("Hosts:Down", host_down, "generic_data", group=g_vc))
+        modules.append(mk_module("Hosts:Total", host_total, "async_data", group=g_vc))
+        modules.append(mk_module("Hosts:Up", host_up, "async_data", group=g_vc))
+        modules.append(mk_module("Hosts:Down", host_down, "async_data", group=g_vc))
 
-        modules.append(mk_module("VMs:Total", vm_total, "generic_data", group=g_vc))
-        modules.append(mk_module("VMs:PoweredOn", vm_on, "generic_data", group=g_vc))
-        modules.append(mk_module("VMs:PoweredOff", vm_off, "generic_data", group=g_vc))
-        modules.append(mk_module("VMs:TotalvCPU", vm_total_vcpu, "generic_data", group=g_vc))
-        modules.append(mk_module("VMs:TotalMemGiB", f"{vm_total_mem_gib:.2f}", "generic_data", unit="GiB", group=g_vc))
-        modules.append(mk_module("VMs:TotalCPUUsedMHz", vm_total_cpu_used_mhz, "generic_data", unit="MHz", group=g_vc))
-        modules.append(mk_module("VMs:TotalMemUsedGiB", f"{vm_total_mem_used_gib:.2f}", "generic_data", unit="GiB", group=g_vc))
+        modules.append(mk_module("VMs:Total", vm_total, "async_data", group=g_vc))
+        modules.append(mk_module("VMs:PoweredOn", vm_on, "async_data", group=g_vc))
+        modules.append(mk_module("VMs:PoweredOff", vm_off, "async_data", group=g_vc))
+        modules.append(mk_module("VMs:TotalvCPU", vm_total_vcpu, "async_data", group=g_vc))
+        modules.append(mk_module("VMs:TotalMemGiB", f"{vm_total_mem_gib:.2f}", "async_data", unit="GiB", group=g_vc))
+        modules.append(mk_module("VMs:TotalCPUUsedMHz", vm_total_cpu_used_mhz, "async_data", unit="MHz", group=g_vc))
+        modules.append(mk_module("VMs:TotalMemUsedGiB", f"{vm_total_mem_used_gib:.2f}", "async_data", unit="GiB", group=g_vc))
 
         # Per-host VM modules
         g_hs = "Host Summary"
@@ -721,17 +721,17 @@ def main():
             hmoid = getattr(h, "_moId", "")
             hname = safe_name(h.name or hmoid)
             agg = host_vm.get(hmoid, {"total":0,"on":0,"off":0,"vcpu":0,"mem_gib":0.0,"cpu_used_mhz":0,"mem_used_gib":0.0})
-            modules.append(mk_module(f"Host:{hname} ({hmoid}):VMsTotal", agg["total"], "generic_data", group=g_hs))
-            modules.append(mk_module(f"Host:{hname} ({hmoid}):VMsUp", agg["on"], "generic_data", group=g_hs))
-            modules.append(mk_module(f"Host:{hname} ({hmoid}):VMsDown", agg["off"], "generic_data", group=g_hs))
-            modules.append(mk_module(f"Host:{hname} ({hmoid}):VMsTotalvCPU", agg["vcpu"], "generic_data", group=g_hs))
-            modules.append(mk_module(f"Host:{hname} ({hmoid}):VMsTotalMemGiB", f"{agg['mem_gib']:.2f}", "generic_data", unit="GiB", group=g_hs))
-            modules.append(mk_module(f"Host:{hname} ({hmoid}):VMsCPUUsedMHz", agg["cpu_used_mhz"], "generic_data", unit="MHz", group=g_hs))
-            modules.append(mk_module(f"Host:{hname} ({hmoid}):VMsMemUsedGiB", f"{agg['mem_used_gib']:.2f}", "generic_data", unit="GiB", group=g_hs))
+            modules.append(mk_module(f"Host:{hname} ({hmoid}):VMsTotal", agg["total"], "async_data", group=g_hs))
+            modules.append(mk_module(f"Host:{hname} ({hmoid}):VMsUp", agg["on"], "async_data", group=g_hs))
+            modules.append(mk_module(f"Host:{hname} ({hmoid}):VMsDown", agg["off"], "async_data", group=g_hs))
+            modules.append(mk_module(f"Host:{hname} ({hmoid}):VMsTotalvCPU", agg["vcpu"], "async_data", group=g_hs))
+            modules.append(mk_module(f"Host:{hname} ({hmoid}):VMsTotalMemGiB", f"{agg['mem_gib']:.2f}", "async_data", unit="GiB", group=g_hs))
+            modules.append(mk_module(f"Host:{hname} ({hmoid}):VMsCPUUsedMHz", agg["cpu_used_mhz"], "async_data", unit="MHz", group=g_hs))
+            modules.append(mk_module(f"Host:{hname} ({hmoid}):VMsMemUsedGiB", f"{agg['mem_used_gib']:.2f}", "async_data", unit="GiB", group=g_hs))
 
         # VM summary table module (single module)
         table_txt = make_vm_summary_table(vm_rows, max_rows=500)
-        modules.append(mk_module("VM:SummaryTable", table_txt, "generic_data_string", group=g_vc))
+        modules.append(mk_module("VM:SummaryTable", table_txt, "async_string", group=g_vc))
 
         # Per-ESXi-host VM summary tables (one table module per host)
         # This is useful to see per-host VM utilization in a single view, without creating per-VM modules.
@@ -741,7 +741,7 @@ def main():
             if not rows:
                 continue
             table_txt = make_vm_summary_table(rows, max_rows=500)
-            modules.append(mk_module(f"Host:{hname} ({hmoid}):VMsSummaryTable", table_txt, "generic_data_string", group=g_hs))
+            modules.append(mk_module(f"Host:{hname} ({hmoid}):VMsSummaryTable", table_txt, "async_string", group=g_hs))
 
         xml_txt = write_agent_xml(agent, args.group, alias, address, "VMware vCenter", modules)
 
