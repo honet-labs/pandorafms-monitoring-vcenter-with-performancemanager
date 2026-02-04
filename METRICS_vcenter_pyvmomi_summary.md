@@ -1,5 +1,4 @@
-# Metrics mapping – pandorafms.vmware_vcenter_pyvmomi_summary
-
+# Metrics mapping – pandorafms.vmware_vcenter_pyvmomi
 This document maps **Pandora modules** to their **source metrics** (vSphere properties and PerformanceManager counters).
 
 ## Data sources
